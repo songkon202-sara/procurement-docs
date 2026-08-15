@@ -1,0 +1,178 @@
+* {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+html, body, #root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family: 'Sarabun', sans-serif;
+}
+
+.pg, .pg * {
+  font-family: 'TH Sarabun IT๙', 'TH SarabunIT9', 'TH Niramit IT๙', 'TH NiramitIT9', 'TH SarabunPSK', 'TH Sarabun New', 'Sarabun', sans-serif;
+}
+.pg {
+  width: 21cm;
+  min-height: 29.7cm;
+  padding: 1.5cm 2cm 2cm 3cm;
+  background: #fff;
+  box-sizing: border-box;
+  margin: 0 auto 22px;
+  box-shadow: 0 6px 26px rgba(0, 0, 0, .16);
+  font-size: 16pt;
+  line-height: 1.5;
+  color: #000;
+  letter-spacing: .01em;
+}
+.pg .dot b {
+  font-size: 20pt;
+}
+.doc-body p {
+  margin: 0 0 7pt;
+  text-indent: 2.5cm;
+  text-align: left;
+  line-break: loose;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.doc-body p.ni {
+  text-indent: 0;
+}
+.dot {
+  border-bottom: 1px dotted #000;
+  padding-bottom: 1px;
+  margin-bottom: 2px;
+}
+.sig3 {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  gap: 28px 0;
+  margin-top: 34px;
+}
+.sig3 > div {
+  width: 33%;
+  text-align: center;
+}
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14pt;
+  margin: 6px 0 12px;
+}
+.tbl th, .tbl td {
+  border: 1px solid #000;
+  padding: 4px 7px;
+  line-break: loose;
+  word-break: break-word;
+}
+
+.panel label {
+  display: block;
+  margin-bottom: 10px;
+}
+.panel label > span {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #3a4654;
+  margin-bottom: 4px;
+}
+.panel input, .panel textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #c5cdd6;
+  border-radius: 8px;
+  font-family: 'Sarabun', sans-serif;
+  font-size: 13px;
+}
+.panel textarea {
+  resize: vertical;
+}
+.panel input:focus, .panel textarea:focus {
+  outline: none;
+  border-color: #1d3a5f;
+  box-shadow: 0 0 0 3px rgba(29, 58, 95, .12);
+}
+.panel .row {
+  display: flex;
+  gap: 10px;
+}
+.panel .row > label {
+  flex: 1;
+}
+.panel h3 {
+  margin: 16px 0 9px;
+  font-size: 12px;
+  letter-spacing: .04em;
+  color: #1d3a5f;
+  border-bottom: 2px solid #e2e7ee;
+  padding-bottom: 6px;
+  font-weight: 700;
+}
+.panel .hint {
+  font-size: 11px;
+  color: #8a96a3;
+  margin: -2px 0 5px;
+}
+
+.navbtn {
+  border: 1px solid #d4dae1;
+  cursor: pointer;
+  padding: 6px 10px 6px 6px;
+  border-radius: 8px;
+  font-family: 'Sarabun', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.navbtn .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+@page {
+  size: A4;
+  margin: 0;
+}
+@media print {
+  .app-chrome {
+    display: none !important;
+  }
+  .screen-root {
+    height: auto !important;
+    display: block !important;
+  }
+  .screen-row {
+    display: block !important;
+  }
+  .preview-area {
+    overflow: visible !important;
+    background: #fff !important;
+    padding: 0 !important;
+  }
+  .pg {
+    box-shadow: none !important;
+    margin: 0 !important;
+    break-after: page;
+  }
+  .pg:last-child {
+    break-after: auto;
+  }
+  .pages-wrap {
+    zoom: 1 !important;
+    padding: 0 !important;
+  }
+}
