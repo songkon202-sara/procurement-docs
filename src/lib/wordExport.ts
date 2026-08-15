@@ -1,5 +1,6 @@
 import { DOC_LIST } from './docs';
 import type { DocId } from '../types';
+import { offerFileDownload, type OfferResult } from './fileOffer';
 
 /**
  * Exports the rendered document pages as a Word-flavored HTML (.doc) blob.
@@ -8,7 +9,11 @@ import type { DocId } from '../types';
  * signature rows and the Garuda letterhead into table/inline-block equivalents — same
  * approach as the prototype, just scoped to a container ref instead of a global DOM query.
  */
-export function downloadWordDoc(container: HTMLElement, printSet: Partial<Record<DocId, boolean>>, filename: string): void {
+export async function downloadWordDoc(
+  container: HTMLElement,
+  printSet: Partial<Record<DocId, boolean>>,
+  filename: string,
+): Promise<OfferResult> {
   const parts: string[] = [];
 
   DOC_LIST.forEach((d) => {
@@ -59,12 +64,10 @@ export function downloadWordDoc(container: HTMLElement, printSet: Partial<Record
     `<style>${css}</style></head><body>${body}</body></html>`;
 
   const blob = new Blob(['﻿' + html], { type: 'application/msword' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${filename}.doc`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  // .doc opens straight into Word on a normal desktop; .html is the fallback candidate
+  // for the Claude downloads capability, which doesn't allow .doc — same HTML content either way.
+  return offerFileDownload([
+    { filename: `${filename}.doc`, data: blob },
+    { filename: `${filename}.html`, data: blob },
+  ]);
 }

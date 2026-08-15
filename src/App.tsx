@@ -36,9 +36,10 @@ export default function App() {
     return () => ro.disconnect();
   }, [fitZoom]);
 
-  const handleDownloadWord = () => {
+  const handleDownloadWord = async () => {
     if (!pagesWrapRef.current) return;
-    downloadWordDoc(pagesWrapRef.current, state.printSet, state.data.projectName || 'เอกสารจัดซื้อจัดจ้าง');
+    const result = await downloadWordDoc(pagesWrapRef.current, state.printSet, state.data.projectName || 'เอกสารจัดซื้อจัดจ้าง');
+    if (result === 'failed') alert('ไม่สามารถบันทึกไฟล์ Word ได้');
   };
 
   return (
