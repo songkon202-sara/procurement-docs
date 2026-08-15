@@ -1,4 +1,5 @@
 import type { Category, DocId, ProcurementData, SavedProject } from '../types';
+import { offerFileDownload, type OfferResult } from './fileOffer';
 
 /**
  * Full-state backup format. Everything the app persists lives only on this one device
@@ -31,16 +32,9 @@ export async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
   return res.blob();
 }
 
-export function downloadJson(payload: unknown, filename: string): void {
+export function downloadJson(payload: unknown, filename: string): Promise<OfferResult> {
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  return offerFileDownload([{ filename, data: blob }]);
 }
 
 export function isBackupPayload(v: unknown): v is BackupPayload {

@@ -354,7 +354,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       garuda2,
     };
     const stamp = new Date().toISOString().slice(0, 10);
-    downloadJson(payload, `procurement-docs-backup-${stamp}.json`);
+    const result = await downloadJson(payload, `procurement-docs-backup-${stamp}.json`);
+    if (result === 'failed') alert('ไม่สามารถบันทึกไฟล์สำรองข้อมูลได้');
   }, [state.category, state.data, state.projects, state.printSet, state.curProjectId]);
 
   const importBackup = useCallback(async (file: File) => {
