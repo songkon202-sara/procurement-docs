@@ -1,9 +1,48 @@
 import { Router } from 'express';
 import { prisma } from '../prismaClient.js';
 import { performAction } from '../domain/performAction.js';
+import { createCase, updateCaseDraft } from '../domain/caseWrite.js';
 import { TRANSITIONS, type ApprovalAction } from '../domain/workflow.js';
 
 export const casesRouter = Router();
+
+casesRouter.get('/cases', async (req, res, next) => {
+  try {
+    const owner = await prisma.user.findUniqueOrThrow({ where: { id: req.user.id } });
+    const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+    const mineOnly = req.query.mine === 'true';
+    const cases = await prisma.procurementCase.findMany({
+      where: {
+        orgId: owner.orgId,
+        status,
+        ownerId: mineOnly ? owner.id : undefined,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+    res.json(cases);
+  } catch (err) {
+    next(err);
+  }
+});
+
+casesRouter.post('/cases', async (req, res, next) => {
+  try {
+    const created = await createCase(prisma, req.user, req.body ?? {});
+    res.status(201).json(created);
+  } catch (err) {
+    next(err);
+  }
+});
+
+casesRouter.patch('/cases/:id', async (req, res, next) => {
+  try {
+    const updated = await updateCaseDraft(prisma, { caseId: req.params.id, actor: req.user, patch: req.body ?? {} });
+    res.json(updated);
+  } catch (err) {
+    next(err);
+  }
+});
 
 /**
  * One endpoint drives every workflow action (submit/review_pass/review_reject/approve/reject/

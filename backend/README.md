@@ -24,9 +24,23 @@ npm run dev               # http://localhost:3001
 and `x-user-roles` (comma-separated role codes) headers — there is no login flow yet;
 see the warning in `src/middleware/auth.ts`.
 
-## Driving a case through the workflow
+## Creating and driving a case
 
 ```bash
+# find or register a vendor (upserts by tax_id — reuses an existing row for the same tax id)
+curl -X POST http://localhost:3001/vendors \
+  -H "x-user-id: <officer id>" -H "x-user-roles: procurement_officer" -H "Content-Type: application/json" \
+  -d '{"legalName": "ร้านไอทีอุบล จำกัด", "taxId": "9876543210123"}'
+
+curl -X POST http://localhost:3001/cases \
+  -H "x-user-id: <officer id>" -H "x-user-roles: procurement_officer" -H "Content-Type: application/json" \
+  -d '{"category":"purchase","projectName":"จัดซื้อหมึกพิมพ์","method":"เฉพาะเจาะจง","legalRef":"มาตรา 56 วรรคหนึ่ง (2) (ข)","amount":5000,"vendorId":"<vendor id>"}'
+
+# editable (line items / members / everything) only while status = draft
+curl -X PATCH http://localhost:3001/cases/<id> \
+  -H "x-user-id: <officer id>" -H "x-user-roles: procurement_officer" -H "Content-Type: application/json" \
+  -d '{"lineItems":[{"name":"หมึกพิมพ์ HP 680","qty":5,"unit":"กล่อง","unitPrice":1000}]}'
+
 curl -X POST http://localhost:3001/cases/<id>/submit \
   -H "x-user-id: <owner user id>" -H "x-user-roles: procurement_officer" \
   -H "Content-Type: application/json" -d '{}'
@@ -37,7 +51,9 @@ curl -X POST http://localhost:3001/cases/<id>/review_pass \
 curl -X POST http://localhost:3001/cases/<id>/approve \
   -H "x-user-id: <approver id>" -H "x-user-roles: approver" -d '{}'
 
-curl http://localhost:3001/cases/<id>   # full case + approvals history
+curl http://localhost:3001/cases/<id>          # full case + approvals history
+curl "http://localhost:3001/cases?status=draft&mine=true"
+curl "http://localhost:3001/vendors?search=อุบล"
 ```
 
 Every transition is validated against `TRANSITIONS` in `src/domain/workflow.ts`
@@ -59,6 +75,6 @@ immutable compliance log) in the same transaction as the status change.
 ## What's not here yet
 
 - Real authentication (session/JWT) — `x-user-id`/`x-user-roles` headers are trusted as-is
-- Routes for creating/editing cases, vendors, and users (only the workflow-transition
-  routes exist: `POST /cases/:id/:action` and `GET /cases/:id`)
+- Routes for creating/editing users, and for managing `case_members` beyond the
+  full-replace `PATCH /cases/:id` payload
 - Multi-level approval by amount (explicitly out of scope for now — see workflow design notes)
