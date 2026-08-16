@@ -14,46 +14,53 @@ npm install
 docker compose up -d
 # or point DATABASE_URL in .env at any Postgres 14+ instance you already have running
 
-cp .env.example .env
-npx prisma migrate dev   # creates tables from prisma/schema.prisma
+cp .env.example .env        # set a real JWT_SECRET beyond local dev
+npx prisma migrate dev      # creates tables from prisma/schema.prisma
+npx prisma db seed          # creates the roles + one bootstrap admin account (prints its password once)
 
-npm run dev               # http://localhost:3001
+npm run dev                 # http://localhost:3001
 ```
 
-`GET /health` needs no auth. Every other route requires `x-user-id` (a real `users.id`)
-and `x-user-roles` (comma-separated role codes) headers — there is no login flow yet;
-see the warning in `src/middleware/auth.ts`.
+## Logging in and provisioning accounts
+
+There's no self-registration — an internal government tool provisions accounts, it doesn't
+let people sign themselves up. `npx prisma db seed` creates the first admin; log in with it,
+create real accounts through `POST /users`, then treat the seeded admin as break-glass only.
+
+```bash
+TOKEN=$(curl -s http://localhost:3001/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.go.th","password":"<printed by the seed command>"}' | jq -r .token)
+
+curl -X POST http://localhost:3001/users -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"fullName":"นางสาวสุนีย์รัตน์ มงคลมะไฟ","position":"พยาบาลวิชาชีพชำนาญการ","email":"suneerat@example.go.th","password":"<min 8 chars>","roleCodes":["procurement_officer"]}'
+```
+
+`GET /health` and `POST /auth/login` need no auth. Every other route requires
+`Authorization: Bearer <token>` from `/auth/login` — see `src/middleware/auth.ts` /
+`src/domain/auth.ts`. Tokens are valid 8 hours; a role granted via `POST /users` (or revoked)
+takes effect on the holder's next login, not retroactively on an existing token.
 
 ## Creating and driving a case
 
 ```bash
 # find or register a vendor (upserts by tax_id — reuses an existing row for the same tax id)
-curl -X POST http://localhost:3001/vendors \
-  -H "x-user-id: <officer id>" -H "x-user-roles: procurement_officer" -H "Content-Type: application/json" \
+curl -X POST http://localhost:3001/vendors -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"legalName": "ร้านไอทีอุบล จำกัด", "taxId": "9876543210123"}'
 
-curl -X POST http://localhost:3001/cases \
-  -H "x-user-id: <officer id>" -H "x-user-roles: procurement_officer" -H "Content-Type: application/json" \
+curl -X POST http://localhost:3001/cases -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"category":"purchase","projectName":"จัดซื้อหมึกพิมพ์","method":"เฉพาะเจาะจง","legalRef":"มาตรา 56 วรรคหนึ่ง (2) (ข)","amount":5000,"vendorId":"<vendor id>"}'
 
 # editable (line items / members / everything) only while status = draft
-curl -X PATCH http://localhost:3001/cases/<id> \
-  -H "x-user-id: <officer id>" -H "x-user-roles: procurement_officer" -H "Content-Type: application/json" \
+curl -X PATCH http://localhost:3001/cases/<id> -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"lineItems":[{"name":"หมึกพิมพ์ HP 680","qty":5,"unit":"กล่อง","unitPrice":1000}]}'
 
-curl -X POST http://localhost:3001/cases/<id>/submit \
-  -H "x-user-id: <owner user id>" -H "x-user-roles: procurement_officer" \
-  -H "Content-Type: application/json" -d '{}'
+curl -X POST http://localhost:3001/cases/<id>/submit -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{}'
+curl -X POST http://localhost:3001/cases/<id>/review_pass -H "Authorization: Bearer $AUDITOR_TOKEN" -d '{}'
+curl -X POST http://localhost:3001/cases/<id>/approve -H "Authorization: Bearer $APPROVER_TOKEN" -d '{}'
 
-curl -X POST http://localhost:3001/cases/<id>/review_pass \
-  -H "x-user-id: <auditor id>" -H "x-user-roles: auditor" -d '{}'
-
-curl -X POST http://localhost:3001/cases/<id>/approve \
-  -H "x-user-id: <approver id>" -H "x-user-roles: approver" -d '{}'
-
-curl http://localhost:3001/cases/<id>          # full case + approvals history
-curl "http://localhost:3001/cases?status=draft&mine=true"
-curl "http://localhost:3001/vendors?search=อุบล"
+curl http://localhost:3001/cases/<id> -H "Authorization: Bearer $TOKEN"          # full case + approvals history
+curl "http://localhost:3001/cases?status=draft&mine=true" -H "Authorization: Bearer $TOKEN"
+curl "http://localhost:3001/vendors?search=อุบล" -H "Authorization: Bearer $TOKEN"
 ```
 
 Every transition is validated against `TRANSITIONS` in `src/domain/workflow.ts`
@@ -74,7 +81,7 @@ immutable compliance log) in the same transaction as the status change.
 
 ## What's not here yet
 
-- Real authentication (session/JWT) — `x-user-id`/`x-user-roles` headers are trusted as-is
-- Routes for creating/editing users, and for managing `case_members` beyond the
-  full-replace `PATCH /cases/:id` payload
+- Token revocation before expiry (deactivating a user via `is_active` blocks their *next*
+  login, but an already-issued token stays valid until it naturally expires in ≤8h)
+- Password reset / "forgot password" flow
 - Multi-level approval by amount (explicitly out of scope for now — see workflow design notes)
