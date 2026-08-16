@@ -1,4 +1,5 @@
 import { useApp } from '../state/store';
+import { useAuth } from '../state/auth';
 import type { Category } from '../types';
 
 const CATS: { key: Category; label: string }[] = [
@@ -9,6 +10,7 @@ const CATS: { key: Category; label: string }[] = [
 
 export function Header({ onDownloadWord }: { onDownloadWord: () => void }) {
   const { state, setCategory, setPrintScope, openReview, openProjects, doPrint } = useApp();
+  const { user, logout } = useAuth();
   const curProjectName = state.projects.find((p) => p.id === state.curProjectId)?.name ?? 'ยังไม่ได้บันทึก';
 
   return (
@@ -121,6 +123,15 @@ export function Header({ onDownloadWord }: { onDownloadWord: () => void }) {
           style={{ border: 'none', cursor: 'pointer', padding: '8px 15px', borderRadius: 8, fontFamily: "'Sarabun',sans-serif", fontSize: 14, fontWeight: 700, background: '#c79a3a', color: '#1a1205', whiteSpace: 'nowrap' }}
         >
           🖨 พิมพ์ / PDF
+        </button>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 10, paddingLeft: 10, borderLeft: '1px solid #2a3d54' }}>
+        <div style={{ fontSize: 12, color: '#cdd8e4', textAlign: 'right', lineHeight: 1.2, whiteSpace: 'nowrap' }}>{user?.fullName}</div>
+        <button
+          onClick={logout}
+          style={{ border: 'none', cursor: 'pointer', padding: '7px 11px', borderRadius: 8, fontFamily: "'Sarabun',sans-serif", fontSize: 12.5, fontWeight: 600, background: '#0e1d2e', color: '#cdd8e4', whiteSpace: 'nowrap' }}
+        >
+          ออกจากระบบ
         </button>
       </div>
     </header>

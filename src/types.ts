@@ -117,3 +117,14 @@ export interface SavedProject {
 }
 
 export type PrintScope = 'current' | 'all';
+
+/** Mirrors backend/src/domain/workflow.ts's RoleCode. */
+export type RoleCode = 'procurement_officer' | 'auditor' | 'approver' | 'admin' | 'viewer';
+
+export interface AuthUser {
+  id: string;
+  fullName: string;
+  position: string;
+  email: string;
+  roles: RoleCode[];
+}
