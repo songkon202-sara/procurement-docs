@@ -6,12 +6,21 @@ import { deleteFile, loadFile, saveFile } from '../lib/idbFiles';
 import { loadJSON, saveJSON, STORAGE_KEYS } from '../lib/persistence';
 import { DOC_LIST, METERED_DOCS } from '../lib/docs';
 import { nextNo } from '../lib/renumber';
-import { addDaysToThaiDate } from '../lib/thaiDate';
+import { addDaysToThaiDate, formatThaiDate } from '../lib/thaiDate';
 import { blobToDataUrl, dataUrlToBlob, downloadJson, isBackupPayload, type BackupPayload } from '../lib/backup';
 import { api, ApiError } from '../lib/api';
 import { toCasePayload, fromCase, type ApiCase } from '../lib/caseMapping';
 
 const DEFAULT_DATA = createDefaultData();
+
+export interface DocNumberRecord {
+  id: string;
+  docId: string;
+  docNo: string;
+  docDate: string;
+  runningNo: number;
+  fiscalYear: number;
+}
 
 interface AppState {
   data: ProcurementData;
@@ -31,6 +40,8 @@ interface AppState {
   caseId: string | null;
   caseStatus: CaseStatus | null;
   caseOwnerId: string | null;
+  /** Registry numbers already issued for this case, keyed by docId (see backend document_numbers table). */
+  documentNumbers: Record<string, DocNumberRecord>;
 }
 
 function initState(): AppState {
@@ -51,6 +62,7 @@ function initState(): AppState {
     caseId: null,
     caseStatus: null,
     caseOwnerId: null,
+    documentNumbers: {},
   };
 }
 
@@ -63,6 +75,7 @@ interface AppContextValue {
   updateField: <K extends keyof ProcurementData>(name: K, value: ProcurementData[K]) => void;
   updateMeta: (key: MeteredDocId, field: 'no' | 'date', value: string) => void;
   autoNumberMeta: () => void;
+  requestDocNumber: (docId: MeteredDocId) => Promise<void>;
   autoCalcVat: () => void;
   autoCalcDeliveryDue: () => void;
   addMember: (kind: 'committee' | 'inspectors') => void;
@@ -150,18 +163,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  /** Renumbers all 7 metered documents +1 sequentially from the first one's current เลขที่. */
+  /**
+   * Renumbers all 7 metered documents +1 sequentially from the first one's current เลขที่.
+   * Skips any document that already has a registry-issued number (see requestDocNumber below) —
+   * those are immutable once issued, matching real government numbering practice.
+   */
   const autoNumberMeta = useCallback(
     () =>
       setState((s) => {
         const base = s.data.docmeta[METERED_DOCS[0].key].no;
         const docmeta = { ...s.data.docmeta };
         METERED_DOCS.forEach((m, i) => {
+          if (s.documentNumbers[m.key]) return;
           docmeta[m.key] = { ...docmeta[m.key], no: i === 0 ? base : nextNo(base, i) };
         });
         return { ...s, data: { ...s.data, docmeta } };
       }),
     [],
+  );
+
+  /**
+   * Reserves the next org-wide running number for one metered document via the backend's
+   * document_numbers registry, fills its เลขที่/วันที่, and persists formData so the assignment
+   * survives a reload. Once issued a number can't be re-requested (see backend/src/domain/
+   * documentNumbers.ts) — the UI locks that row's inputs based on state.documentNumbers.
+   */
+  const requestDocNumber = useCallback(
+    async (docId: MeteredDocId) => {
+      if (!state.caseId) return;
+      let created: DocNumberRecord;
+      try {
+        created = await api.post<DocNumberRecord>(`/cases/${state.caseId}/document-numbers`, { docId });
+      } catch (err) {
+        alert(err instanceof ApiError ? err.message : 'ขอเลขที่หนังสือไม่สำเร็จ');
+        return;
+      }
+      // The number is now issued server-side (irreversibly — re-requesting would 409), so lock
+      // it in local state right away. If the formData mirror-save below fails, the next
+      // successful saveCase() will catch it back up — not worth surfacing as an error here.
+      const docmeta = { ...state.data.docmeta, [docId]: { no: created.docNo, date: formatThaiDate(new Date(created.docDate)) } };
+      const data = { ...state.data, docmeta };
+      setState((s) => ({ ...s, data, documentNumbers: { ...s.documentNumbers, [docId]: created } }));
+      await api.patch(`/cases/${state.caseId}`, { formData: data }).catch(() => {});
+    },
+    [state.caseId, state.data],
   );
 
   /** Splits the total วงเงิน into a pre-VAT subtotal + 7% VAT for the ใบสั่งซื้อ/สั่งจ้าง fields. */
@@ -303,6 +348,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         caseId: null,
         caseStatus: null,
         caseOwnerId: null,
+        documentNumbers: {},
         showProjects: false,
       })),
     [],
@@ -324,8 +370,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const loadCase = useCallback(async (id: string) => {
     try {
       const kase = await api.get<ApiCase>(`/cases/${id}`);
-      const { category, data } = fromCase(kase);
-      setState((s) => ({ ...s, data, category, caseId: kase.id, caseStatus: kase.status, caseOwnerId: kase.ownerId, showProjects: false }));
+      const { category, data, documentNumbers } = fromCase(kase);
+      const docNumberMap: Record<string, DocNumberRecord> = {};
+      (documentNumbers ?? []).forEach((d) => (docNumberMap[d.docId] = d));
+      setState((s) => ({
+        ...s,
+        data,
+        category,
+        caseId: kase.id,
+        caseStatus: kase.status,
+        caseOwnerId: kase.ownerId,
+        documentNumbers: docNumberMap,
+        showProjects: false,
+      }));
     } catch (err) {
       alert(err instanceof ApiError ? err.message : 'เปิดโครงการไม่สำเร็จ');
     }
@@ -355,7 +412,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const cancelCase = useCallback(async (id: string) => {
     try {
       await api.post(`/cases/${id}/cancel`);
-      setState((s) => (s.caseId === id ? { ...s, caseId: null, caseStatus: null, caseOwnerId: null } : s));
+      setState((s) => (s.caseId === id ? { ...s, caseId: null, caseStatus: null, caseOwnerId: null, documentNumbers: {} } : s));
     } catch (err) {
       alert(err instanceof ApiError ? err.message : 'ยกเลิกโครงการไม่สำเร็จ');
     }
@@ -426,6 +483,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateField,
       updateMeta,
       autoNumberMeta,
+      requestDocNumber,
       autoCalcVat,
       autoCalcDeliveryDue,
       addMember,
@@ -464,6 +522,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateField,
       updateMeta,
       autoNumberMeta,
+      requestDocNumber,
       autoCalcVat,
       autoCalcDeliveryDue,
       addMember,

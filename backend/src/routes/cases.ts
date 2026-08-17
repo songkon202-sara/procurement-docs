@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../prismaClient.js';
 import { performAction } from '../domain/performAction.js';
 import { createCase, updateCaseDraft } from '../domain/caseWrite.js';
+import { issueDocumentNumber } from '../domain/documentNumbers.js';
 import { TRANSITIONS, type ApprovalAction } from '../domain/workflow.js';
 
 export const casesRouter = Router();
@@ -44,10 +45,22 @@ casesRouter.patch('/cases/:id', async (req, res, next) => {
   }
 });
 
+/** Reserves the next org-wide running number for one metered document of this case (see backend/src/domain/documentNumbers.ts). */
+casesRouter.post('/cases/:id/document-numbers', async (req, res, next) => {
+  try {
+    const created = await issueDocumentNumber(prisma, { caseId: req.params.id, docId: req.body?.docId, actor: req.user });
+    res.status(201).json(created);
+  } catch (err) {
+    next(err);
+  }
+});
+
 /**
  * One endpoint drives every workflow action (submit/review_pass/review_reject/approve/reject/
  * reopen/complete/cancel) — see backend/src/domain/workflow.ts for the transition table that
  * decides what's allowed from where. Example: POST /cases/<id>/submit { "comment": "..." }
+ * Registered after the more specific POST routes above so "document-numbers" isn't swallowed
+ * as an unknown :action.
  */
 casesRouter.post('/cases/:id/:action', async (req, res, next) => {
   try {
@@ -72,7 +85,7 @@ casesRouter.get('/cases/:id', async (req, res, next) => {
   try {
     const kase = await prisma.procurementCase.findUnique({
       where: { id: req.params.id },
-      include: { approvals: { orderBy: { actedAt: 'asc' } }, vendor: true, members: true, lineItems: true },
+      include: { approvals: { orderBy: { actedAt: 'asc' } }, vendor: true, members: true, lineItems: true, documentNumbers: true },
     });
     if (!kase) return res.status(404).json({ error: 'ไม่พบเรื่องนี้' });
     res.json(kase);

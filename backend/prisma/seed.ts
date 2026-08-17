@@ -25,6 +25,7 @@ async function main() {
     create: {
       id: '00000000-0000-0000-0000-000000000000',
       name: process.env.SEED_ORG_NAME ?? 'หน่วยงานตัวอย่าง',
+      docNoPrefix: process.env.SEED_ORG_DOC_PREFIX ?? 'อบ 2733.1/3.1.1',
     },
   });
 
