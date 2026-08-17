@@ -33,10 +33,20 @@ export function saveString(key: string, value: string): void {
   }
 }
 
+export function removeItem(key: string): void {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // ignore
+  }
+}
+
 export const STORAGE_KEYS = {
   data: 'proc_data_v2',
   category: 'proc_cat',
   printSet: 'proc_printset',
   curProjectId: 'proc_curproj',
   projects: 'proc_projects_v2',
+  authToken: 'proc_auth_token',
+  authUser: 'proc_auth_user',
 } as const;
