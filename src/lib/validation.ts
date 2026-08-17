@@ -3,7 +3,7 @@ import { fmt } from './format';
 import { compareThaiDates } from './thaiDate';
 import type { ProcurementData } from '../types';
 
-function numOf(v: string | undefined): number {
+export function numOf(v: string | undefined): number {
   return Number(String(v ?? '').replace(/[, ]/g, '')) || 0;
 }
 

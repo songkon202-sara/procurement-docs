@@ -27,6 +27,7 @@ export function createDefaultData(): ProcurementData {
     penaltyRate: '0.10',
     penaltyMin: '100.00',
 
+    vendorId: '',
     vendorName: 'บริษัท ไดโนคอมพ์ จำกัด',
     vendorRep: 'นางสาวพัชรี บุญยู้',
     vendorTaxId: '0345556001437',
