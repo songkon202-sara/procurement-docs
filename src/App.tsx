@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Header } from './components/Header';
+import { WorkflowBar } from './components/WorkflowBar';
 import { PreviewNav } from './components/PreviewNav';
 import { Sidebar } from './components/Sidebar';
 import { ReviewModal } from './components/ReviewModal';
@@ -45,6 +46,7 @@ export default function App() {
   return (
     <div className="screen-root" style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#dfe4ea' }}>
       <Header onDownloadWord={handleDownloadWord} />
+      <WorkflowBar />
 
       <div className="screen-row" style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         <Sidebar vm={vm} />

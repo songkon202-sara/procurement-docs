@@ -4,6 +4,7 @@ import { useApp } from '../state/store';
 import { GarudaUploader } from './sidebar/GarudaUploader';
 import { ItemsEditor } from './sidebar/ItemsEditor';
 import { PersonRowsEditor } from './sidebar/PersonRowsEditor';
+import { VendorPicker } from './sidebar/VendorPicker';
 import { Row, TextAreaField, TextField } from './sidebar/fields';
 import type { DocViewModel } from '../lib/viewModel';
 
@@ -30,6 +31,10 @@ export function Sidebar({ vm }: { vm: DocViewModel }) {
   const secVisible = (k: SectionKey) => !filterOn || activeSecs.includes(k);
   const activeLabel = DOC_LIST.find((d) => d.id === activeDoc)?.label ?? '';
   const metaList = filterOn ? METERED_DOCS.filter((m) => m.key === activeDoc) : METERED_DOCS;
+  // Fields lock once a case leaves draft — editing after submit must go through the workflow's
+  // reopen action first (see backend/src/domain/caseWrite.ts), so the approval/audit trail
+  // always reflects what was actually reviewed, never a silent post-review edit.
+  const readOnly = !!(state.caseStatus && state.caseStatus !== 'draft');
 
   return (
     <aside className="app-chrome panel" style={{ width: 370, flexShrink: 0, background: '#fff', borderRight: '1px solid #d4dae1', overflowY: 'auto', padding: '16px 18px' }}>
@@ -54,24 +59,31 @@ export function Sidebar({ vm }: { vm: DocViewModel }) {
         </button>
       </div>
 
-      <h3>ตราครุฑ (ตามประเภทหนังสือ)</h3>
-      <div className="hint">ครุฑเล็ก ๑.๕ ซม. สำหรับบันทึกข้อความ · ครุฑใหญ่ ๓ ซม. สำหรับประกาศ/ใบสั่ง (ถ้าไม่อัปโหลดครุฑใหญ่ จะใช้ครุฑเล็กแทน)</div>
-      <GarudaUploader
-        label="ครุฑเล็ก — บันทึกข้อความ"
-        placeholderLines={['ครุฑเล็ก', '๑.๕ ซม.']}
-        url={state.garudaUrl}
-        onUpload={uploadGaruda}
-        onClear={clearGaruda}
-      />
-      <GarudaUploader
-        label="ครุฑใหญ่ — ประกาศ / ใบสั่ง"
-        placeholderLines={['ครุฑใหญ่', '๓ ซม.']}
-        url={state.garuda2Url}
-        onUpload={uploadGaruda2}
-        onClear={clearGaruda2}
-      />
+      {readOnly && (
+        <div style={{ background: '#fbeaea', border: '1px solid #e0c3c3', borderRadius: 10, padding: '9px 11px', marginBottom: 10, fontSize: 12, color: '#b4232a' }}>
+          🔒 เรื่องนี้ถูกส่งออกจากสถานะร่างแล้ว แก้ไขฟอร์มไม่ได้ — ถ้าถูกตีกลับ ใช้ปุ่ม "แก้ไขแล้วส่งใหม่" ด้านบนก่อน
+        </div>
+      )}
 
-      <Section visible={secVisible('org')}>
+      <fieldset disabled={readOnly} style={{ border: 'none', margin: 0, padding: 0 }}>
+        <h3>ตราครุฑ (ตามประเภทหนังสือ)</h3>
+        <div className="hint">ครุฑเล็ก ๑.๕ ซม. สำหรับบันทึกข้อความ · ครุฑใหญ่ ๓ ซม. สำหรับประกาศ/ใบสั่ง (ถ้าไม่อัปโหลดครุฑใหญ่ จะใช้ครุฑเล็กแทน)</div>
+        <GarudaUploader
+          label="ครุฑเล็ก — บันทึกข้อความ"
+          placeholderLines={['ครุฑเล็ก', '๑.๕ ซม.']}
+          url={state.garudaUrl}
+          onUpload={uploadGaruda}
+          onClear={clearGaruda}
+        />
+        <GarudaUploader
+          label="ครุฑใหญ่ — ประกาศ / ใบสั่ง"
+          placeholderLines={['ครุฑใหญ่', '๓ ซม.']}
+          url={state.garuda2Url}
+          onUpload={uploadGaruda2}
+          onClear={clearGaruda2}
+        />
+
+        <Section visible={secVisible('org')}>
         <h3>ข้อมูลหน่วยงาน</h3>
         <TextField label="ชื่อหน่วยงาน (ส่วนราชการ)" value={data.org} onChange={(v) => updateField('org', v)} />
         <TextField label="อำเภอ / จังหวัด / รหัสไปรษณีย์" value={data.district} onChange={(v) => updateField('district', v)} />
@@ -121,7 +133,7 @@ export function Sidebar({ vm }: { vm: DocViewModel }) {
 
       <Section visible={secVisible('vendor')}>
         <h3>คู่สัญญา / ผู้เสนอราคา</h3>
-        <TextField label="ชื่อร้าน/บริษัท (คู่สัญญา)" value={data.vendorName} onChange={(v) => updateField('vendorName', v)} />
+        <VendorPicker />
         <Row>
           <TextField flex={1} label="ผู้ลงนาม (ผู้เสนอราคา)" value={data.vendorRep} onChange={(v) => updateField('vendorRep', v)} />
           <TextField flex={1} label="เลขผู้เสียภาษี" value={data.vendorTaxId} onChange={(v) => updateField('vendorTaxId', v)} />
@@ -212,7 +224,8 @@ export function Sidebar({ vm }: { vm: DocViewModel }) {
           <MiniButton onClick={autoCalcDeliveryDue}>คำนวณอัตโนมัติ</MiniButton>
         </div>
         <TextField label="ครบกำหนดส่งมอบ" value={data.deliveryDueDate} onChange={(v) => updateField('deliveryDueDate', v)} />
-      </Section>
+        </Section>
+      </fieldset>
 
       <div style={{ height: 30 }} />
     </aside>
