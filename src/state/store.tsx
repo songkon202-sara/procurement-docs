@@ -30,6 +30,7 @@ interface AppState {
   /** The backend case currently loaded, if any. null = unsaved local draft (not yet POSTed). */
   caseId: string | null;
   caseStatus: CaseStatus | null;
+  caseOwnerId: string | null;
 }
 
 function initState(): AppState {
@@ -49,6 +50,7 @@ function initState(): AppState {
     garuda2Url: null,
     caseId: null,
     caseStatus: null,
+    caseOwnerId: null,
   };
 }
 
@@ -86,6 +88,7 @@ interface AppContextValue {
   saveCase: () => Promise<void>;
   loadCase: (id: string) => Promise<void>;
   cancelCase: (id: string) => Promise<void>;
+  performCaseAction: (action: string, comment?: string) => Promise<void>;
   exportBackup: () => Promise<void>;
   importBackup: (file: File) => Promise<void>;
 }
@@ -299,6 +302,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         data: JSON.parse(JSON.stringify(defaultsRef.current)) as ProcurementData,
         caseId: null,
         caseStatus: null,
+        caseOwnerId: null,
         showProjects: false,
       })),
     [],
@@ -311,7 +315,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const kase = state.caseId
         ? await api.patch<ApiCase>(`/cases/${state.caseId}`, patch)
         : await api.post<ApiCase>('/cases', { category, ...patch });
-      setState((s) => ({ ...s, caseId: kase.id, caseStatus: kase.status, showProjects: false }));
+      setState((s) => ({ ...s, caseId: kase.id, caseStatus: kase.status, caseOwnerId: kase.ownerId, showProjects: false }));
     } catch (err) {
       alert(err instanceof ApiError ? err.message : 'บันทึกโครงการไม่สำเร็จ');
     }
@@ -321,17 +325,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const kase = await api.get<ApiCase>(`/cases/${id}`);
       const { category, data } = fromCase(kase);
-      setState((s) => ({ ...s, data, category, caseId: kase.id, caseStatus: kase.status, showProjects: false }));
+      setState((s) => ({ ...s, data, category, caseId: kase.id, caseStatus: kase.status, caseOwnerId: kase.ownerId, showProjects: false }));
     } catch (err) {
       alert(err instanceof ApiError ? err.message : 'เปิดโครงการไม่สำเร็จ');
     }
   }, []);
 
+  /**
+   * Drives every workflow transition (submit/review_pass/review_reject/approve/reject/reopen/
+   * complete) against the currently loaded case. The frontend has its own copy of which
+   * actions make sense to show for a given status+role (see WorkflowBar.tsx), but that's only
+   * to reduce friction -- the backend's TRANSITIONS table is the actual authority and rejects
+   * anything not allowed regardless of what the UI offered.
+   */
+  const performCaseAction = useCallback(
+    async (action: string, comment?: string) => {
+      if (!state.caseId) return;
+      try {
+        const kase = await api.post<ApiCase>(`/cases/${state.caseId}/${action}`, comment ? { comment } : {});
+        setState((s) => ({ ...s, caseStatus: kase.status }));
+      } catch (err) {
+        alert(err instanceof ApiError ? err.message : 'ดำเนินการไม่สำเร็จ');
+      }
+    },
+    [state.caseId],
+  );
+
   /** No real delete on the backend — cancel is the closest equivalent (only valid from draft/submitted). */
   const cancelCase = useCallback(async (id: string) => {
     try {
       await api.post(`/cases/${id}/cancel`);
-      setState((s) => (s.caseId === id ? { ...s, caseId: null, caseStatus: null } : s));
+      setState((s) => (s.caseId === id ? { ...s, caseId: null, caseStatus: null, caseOwnerId: null } : s));
     } catch (err) {
       alert(err instanceof ApiError ? err.message : 'ยกเลิกโครงการไม่สำเร็จ');
     }
@@ -427,6 +451,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveCase,
       loadCase,
       cancelCase,
+      performCaseAction,
       exportBackup,
       importBackup,
     }),
@@ -464,6 +489,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveCase,
       loadCase,
       cancelCase,
+      performCaseAction,
       exportBackup,
       importBackup,
     ],
