@@ -65,6 +65,7 @@ export interface ProcurementData {
   penaltyMin: string;
 
   // คู่สัญญา
+  vendorId: string;
   vendorName: string;
   vendorRep: string;
   vendorTaxId: string;
@@ -120,6 +121,9 @@ export type PrintScope = 'current' | 'all';
 
 /** Mirrors backend/src/domain/workflow.ts's RoleCode. */
 export type RoleCode = 'procurement_officer' | 'auditor' | 'approver' | 'admin' | 'viewer';
+
+/** Mirrors backend/src/domain/workflow.ts's CaseStatus. */
+export type CaseStatus = 'draft' | 'submitted' | 'under_review' | 'approved' | 'rejected' | 'completed' | 'cancelled';
 
 export interface AuthUser {
   id: string;

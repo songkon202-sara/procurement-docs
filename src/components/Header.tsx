@@ -11,7 +11,7 @@ const CATS: { key: Category; label: string }[] = [
 export function Header({ onDownloadWord }: { onDownloadWord: () => void }) {
   const { state, setCategory, setPrintScope, openReview, openProjects, doPrint } = useApp();
   const { user, logout } = useAuth();
-  const curProjectName = state.projects.find((p) => p.id === state.curProjectId)?.name ?? 'ยังไม่ได้บันทึก';
+  const curProjectName = state.caseId ? state.data.projectName || 'ยังไม่ได้บันทึก' : 'ยังไม่ได้บันทึก';
 
   return (
     <header

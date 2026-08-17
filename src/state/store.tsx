@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Category, DocId, PersonRow, LineItem, MeteredDocId, PrintScope, ProcurementData, SavedProject } from '../types';
+import type { CaseStatus, Category, DocId, PersonRow, LineItem, MeteredDocId, PrintScope, ProcurementData, SavedProject } from '../types';
 import { createDefaultData, defaultCategory } from '../lib/defaultData';
 import { makeId } from '../lib/id';
 import { deleteFile, loadFile, saveFile } from '../lib/idbFiles';
@@ -8,6 +8,8 @@ import { DOC_LIST, METERED_DOCS } from '../lib/docs';
 import { nextNo } from '../lib/renumber';
 import { addDaysToThaiDate } from '../lib/thaiDate';
 import { blobToDataUrl, dataUrlToBlob, downloadJson, isBackupPayload, type BackupPayload } from '../lib/backup';
+import { api, ApiError } from '../lib/api';
+import { toCasePayload, fromCase, type ApiCase } from '../lib/caseMapping';
 
 const DEFAULT_DATA = createDefaultData();
 
@@ -25,6 +27,9 @@ interface AppState {
   curProjectId: string;
   garudaUrl: string | null;
   garuda2Url: string | null;
+  /** The backend case currently loaded, if any. null = unsaved local draft (not yet POSTed). */
+  caseId: string | null;
+  caseStatus: CaseStatus | null;
 }
 
 function initState(): AppState {
@@ -42,6 +47,8 @@ function initState(): AppState {
     curProjectId: loadJSON<string>(STORAGE_KEYS.curProjectId) ?? '',
     garudaUrl: null,
     garuda2Url: null,
+    caseId: null,
+    caseStatus: null,
   };
 }
 
@@ -75,10 +82,10 @@ interface AppContextValue {
   doPrint: () => void;
   openProjects: () => void;
   closeProjects: () => void;
-  newProject: () => void;
-  saveProject: (name: string) => void;
-  loadProject: (id: string) => void;
-  deleteProject: (id: string) => void;
+  newCase: () => void;
+  saveCase: () => Promise<void>;
+  loadCase: (id: string) => Promise<void>;
+  cancelCase: (id: string) => Promise<void>;
   exportBackup: () => Promise<void>;
   importBackup: (file: File) => Promise<void>;
 }
@@ -285,56 +292,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const openProjects = useCallback(() => setState((s) => ({ ...s, showProjects: true })), []);
   const closeProjects = useCallback(() => setState((s) => ({ ...s, showProjects: false })), []);
-  const newProject = useCallback(
+  const newCase = useCallback(
     () =>
       setState((s) => ({
         ...s,
         data: JSON.parse(JSON.stringify(defaultsRef.current)) as ProcurementData,
-        curProjectId: '',
+        caseId: null,
+        caseStatus: null,
         showProjects: false,
       })),
     [],
   );
-  const saveProject = useCallback(
-    (name: string) =>
-      setState((s) => {
-        const id = s.curProjectId || `p${Date.now()}`;
-        const project: SavedProject = {
-          id,
-          name,
-          category: s.category,
-          data: JSON.parse(JSON.stringify(s.data)) as ProcurementData,
-          ts: Date.now(),
-        };
-        const others = s.projects.filter((p) => p.id !== id);
-        return { ...s, projects: [...others, project], curProjectId: id };
-      }),
-    [],
-  );
-  const loadProject = useCallback(
-    (id: string) =>
-      setState((s) => {
-        const p = s.projects.find((x) => x.id === id);
-        if (!p) return s;
-        return {
-          ...s,
-          data: JSON.parse(JSON.stringify(p.data)) as ProcurementData,
-          category: p.category,
-          curProjectId: id,
-          showProjects: false,
-        };
-      }),
-    [],
-  );
-  const deleteProject = useCallback(
-    (id: string) =>
-      setState((s) => ({
-        ...s,
-        projects: s.projects.filter((p) => p.id !== id),
-        curProjectId: s.curProjectId === id ? '' : s.curProjectId,
-      })),
-    [],
-  );
+
+  /** Creates the case (POST) the first time, then edits it (PATCH) on every subsequent save. */
+  const saveCase = useCallback(async () => {
+    const { category, ...patch } = toCasePayload(state.data, state.category);
+    try {
+      const kase = state.caseId
+        ? await api.patch<ApiCase>(`/cases/${state.caseId}`, patch)
+        : await api.post<ApiCase>('/cases', { category, ...patch });
+      setState((s) => ({ ...s, caseId: kase.id, caseStatus: kase.status, showProjects: false }));
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : 'บันทึกโครงการไม่สำเร็จ');
+    }
+  }, [state.data, state.category, state.caseId]);
+
+  const loadCase = useCallback(async (id: string) => {
+    try {
+      const kase = await api.get<ApiCase>(`/cases/${id}`);
+      const { category, data } = fromCase(kase);
+      setState((s) => ({ ...s, data, category, caseId: kase.id, caseStatus: kase.status, showProjects: false }));
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : 'เปิดโครงการไม่สำเร็จ');
+    }
+  }, []);
+
+  /** No real delete on the backend — cancel is the closest equivalent (only valid from draft/submitted). */
+  const cancelCase = useCallback(async (id: string) => {
+    try {
+      await api.post(`/cases/${id}/cancel`);
+      setState((s) => (s.caseId === id ? { ...s, caseId: null, caseStatus: null } : s));
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : 'ยกเลิกโครงการไม่สำเร็จ');
+    }
+  }, []);
 
   const exportBackup = useCallback(async () => {
     const [smallBlob, largeBlob] = await Promise.all([loadFile('garuda'), loadFile('garuda2')]);
@@ -422,10 +423,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       doPrint,
       openProjects,
       closeProjects,
-      newProject,
-      saveProject,
-      loadProject,
-      deleteProject,
+      newCase,
+      saveCase,
+      loadCase,
+      cancelCase,
       exportBackup,
       importBackup,
     }),
@@ -459,10 +460,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       doPrint,
       openProjects,
       closeProjects,
-      newProject,
-      saveProject,
-      loadProject,
-      deleteProject,
+      newCase,
+      saveCase,
+      loadCase,
+      cancelCase,
       exportBackup,
       importBackup,
     ],

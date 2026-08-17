@@ -10,6 +10,15 @@ export interface CreateCaseInput {
   amount: number;
   fundSource?: string;
   vendorId?: string;
+  formData?: Record<string, unknown>;
+  lineItems?: { name: string; qty: number; unit: string; unitPrice: number }[];
+  members?: {
+    kind: 'committee' | 'inspectors';
+    userId?: string;
+    externalName?: string;
+    position: string;
+    roleLabel: string;
+  }[];
 }
 
 export interface UpdateCaseInput {
@@ -46,18 +55,38 @@ export async function createCase(prisma: PrismaClient, actor: AuthedUser, input:
   const owner = await prisma.user.findUnique({ where: { id: actor.id } });
   if (!owner) throw new NotFoundError('ไม่พบผู้ใช้งานนี้ในระบบ');
 
-  return prisma.procurementCase.create({
-    data: {
-      orgId: owner.orgId,
-      ownerId: owner.id,
-      category: input.category,
-      projectName: input.projectName,
-      method: input.method,
-      legalRef: input.legalRef,
-      amount: input.amount,
-      fundSource: input.fundSource,
-      vendorId: input.vendorId,
-    },
+  return prisma.$transaction(async (tx) => {
+    const created = await tx.procurementCase.create({
+      data: {
+        orgId: owner.orgId,
+        ownerId: owner.id,
+        category: input.category,
+        projectName: input.projectName,
+        method: input.method,
+        legalRef: input.legalRef,
+        amount: input.amount,
+        fundSource: input.fundSource,
+        vendorId: input.vendorId,
+        formData: (input.formData ?? {}) as Prisma.InputJsonValue,
+        lineItems: input.lineItems?.length
+          ? { create: input.lineItems.map((item, i) => ({ ...item, sortOrder: i })) }
+          : undefined,
+        members: input.members?.length ? { create: input.members.map((m, i) => ({ ...m, sortOrder: i })) } : undefined,
+      },
+      include: { lineItems: true, members: true, vendor: true },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorId: actor.id,
+        entityType: 'procurement_case',
+        entityId: created.id,
+        action: 'create',
+        afterData: created as unknown as Prisma.InputJsonValue,
+      },
+    });
+
+    return created;
   });
 }
 
