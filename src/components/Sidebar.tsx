@@ -4,6 +4,7 @@ import { useApp } from '../state/store';
 import { GarudaUploader } from './sidebar/GarudaUploader';
 import { ItemsEditor } from './sidebar/ItemsEditor';
 import { PersonRowsEditor } from './sidebar/PersonRowsEditor';
+import { VendorPicker } from './sidebar/VendorPicker';
 import { Row, TextAreaField, TextField } from './sidebar/fields';
 import type { DocViewModel } from '../lib/viewModel';
 
@@ -121,7 +122,7 @@ export function Sidebar({ vm }: { vm: DocViewModel }) {
 
       <Section visible={secVisible('vendor')}>
         <h3>คู่สัญญา / ผู้เสนอราคา</h3>
-        <TextField label="ชื่อร้าน/บริษัท (คู่สัญญา)" value={data.vendorName} onChange={(v) => updateField('vendorName', v)} />
+        <VendorPicker />
         <Row>
           <TextField flex={1} label="ผู้ลงนาม (ผู้เสนอราคา)" value={data.vendorRep} onChange={(v) => updateField('vendorRep', v)} />
           <TextField flex={1} label="เลขผู้เสียภาษี" value={data.vendorTaxId} onChange={(v) => updateField('vendorTaxId', v)} />
