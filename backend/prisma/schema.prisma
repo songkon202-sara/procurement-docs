@@ -11,11 +11,12 @@ datasource db {
 // Organizations — รองรับหลายหน่วยงานในอนาคต แม้ปัจจุบันจะมีหน่วยงานเดียว
 // ==========================================================
 model Organization {
-  id        String   @id @default(uuid())
-  name      String
-  district  String?
-  address   String?
-  createdAt DateTime @default(now()) @map("created_at")
+  id          String   @id @default(uuid())
+  name        String
+  district    String?
+  address     String?
+  docNoPrefix String?  @map("doc_no_prefix") // e.g. "อบ 2733.1/3.1.1" — prepended to the running number for document_numbers.docNo
+  createdAt   DateTime @default(now()) @map("created_at")
 
   users            User[]
   vendors          Vendor[]
@@ -147,7 +148,7 @@ model DocumentNumber {
   case ProcurementCase @relation(fields: [caseId], references: [id])
 
   @@unique([orgId, fiscalYear, runningNo])
-  @@index([caseId])
+  @@unique([caseId, docId])
   @@map("document_numbers")
 }
 

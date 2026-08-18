@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { DOC_LIST, METERED_DOCS, SEC, type SectionKey } from '../lib/docs';
 import { useApp } from '../state/store';
 import { GarudaUploader } from './sidebar/GarudaUploader';
@@ -24,8 +24,28 @@ function MiniButton({ onClick, children }: { onClick: () => void; children: Reac
 }
 
 export function Sidebar({ vm }: { vm: DocViewModel }) {
-  const { state, updateField, updateMeta, toggleFilter, uploadGaruda, clearGaruda, uploadGaruda2, clearGaruda2, autoNumberMeta, autoCalcVat, autoCalcDeliveryDue } = useApp();
+  const {
+    state,
+    updateField,
+    updateMeta,
+    toggleFilter,
+    uploadGaruda,
+    clearGaruda,
+    uploadGaruda2,
+    clearGaruda2,
+    autoNumberMeta,
+    requestDocNumber,
+    autoCalcVat,
+    autoCalcDeliveryDue,
+  } = useApp();
   const { data, filterOn, activeDoc } = state;
+  const [busyDocId, setBusyDocId] = useState<string | null>(null);
+
+  const handleRequestDocNumber = async (docId: (typeof METERED_DOCS)[number]['key']) => {
+    setBusyDocId(docId);
+    await requestDocNumber(docId);
+    setBusyDocId(null);
+  };
 
   const activeSecs: SectionKey[] = SEC[activeDoc] ?? [];
   const secVisible = (k: SectionKey) => !filterOn || activeSecs.includes(k);
@@ -198,15 +218,44 @@ export function Sidebar({ vm }: { vm: DocViewModel }) {
           <span className="hint" style={{ margin: 0, flex: 1 }}>เอกสารที่มีเลขหนังสือราชการ — แก้ได้ทีละฉบับ</span>
           <MiniButton onClick={autoNumberMeta}>เรียงเลขที่ให้อัตโนมัติ</MiniButton>
         </div>
-        {metaList.map((m) => (
-          <div key={m.key} style={{ marginBottom: 9 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: '#5a6675', marginBottom: 3 }}>{m.label}</div>
-            <Row>
-              <input value={data.docmeta[m.key].no} onChange={(e) => updateMeta(m.key, 'no', e.target.value)} placeholder="เลขที่หนังสือ" />
-              <input value={data.docmeta[m.key].date} onChange={(e) => updateMeta(m.key, 'date', e.target.value)} placeholder="ลงวันที่" />
-            </Row>
-          </div>
-        ))}
+        {metaList.map((m) => {
+          const issued = state.documentNumbers[m.key];
+          const busy = busyDocId === m.key;
+          return (
+            <div key={m.key} style={{ marginBottom: 9 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                <div style={{ flex: 1, fontSize: 11, fontWeight: 600, color: '#5a6675' }}>{m.label}</div>
+                {issued && (
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#1d8a5b', background: '#e6f4ec', borderRadius: 5, padding: '1px 6px' }}>
+                    ✓ ออกเลขที่แล้ว (เลขวิ่ง #{issued.runningNo} ปีงบ {issued.fiscalYear})
+                  </span>
+                )}
+                {!issued && state.caseId && (
+                  <MiniButton onClick={() => void handleRequestDocNumber(m.key)}>
+                    {busy ? 'กำลังออกเลขที่...' : 'ขอเลขที่หนังสือ'}
+                  </MiniButton>
+                )}
+              </div>
+              <Row>
+                <input
+                  value={data.docmeta[m.key].no}
+                  disabled={!!issued}
+                  onChange={(e) => updateMeta(m.key, 'no', e.target.value)}
+                  placeholder="เลขที่หนังสือ"
+                />
+                <input
+                  value={data.docmeta[m.key].date}
+                  disabled={!!issued}
+                  onChange={(e) => updateMeta(m.key, 'date', e.target.value)}
+                  placeholder="ลงวันที่"
+                />
+              </Row>
+              {!issued && !state.caseId && (
+                <div className="hint" style={{ margin: '3px 0 0' }}>บันทึกโครงการก่อนจึงจะขอเลขที่หนังสือจากระบบกลางได้</div>
+              )}
+            </div>
+          );
+        })}
       </Section>
 
       <Section visible={secVisible('dates')}>

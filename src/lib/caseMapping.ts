@@ -22,6 +22,7 @@ export interface ApiCase {
   updatedAt: string;
   lineItems?: { id: string; name: string; qty: string; unit: string; unitPrice: string }[];
   members?: { id: string; kind: 'committee' | 'inspectors'; userId: string | null; externalName: string | null; position: string; roleLabel: string }[];
+  documentNumbers?: { id: string; docId: string; docNo: string; docDate: string; runningNo: number; fiscalYear: number }[];
 }
 
 export interface CasePayload {
@@ -67,7 +68,7 @@ export function toCasePayload(data: ProcurementData, category: Category): CasePa
   };
 }
 
-export function fromCase(kase: ApiCase): { category: Category; data: ProcurementData } {
+export function fromCase(kase: ApiCase): { category: Category; data: ProcurementData; documentNumbers: ApiCase['documentNumbers'] } {
   const saved = (kase.formData ?? {}) as Partial<ProcurementData>;
 
   const data: ProcurementData = {
@@ -88,5 +89,5 @@ export function fromCase(kase: ApiCase): { category: Category; data: Procurement
       .map((m) => ({ id: makeId(), name: m.externalName ?? '', pos: m.position, role: m.roleLabel })),
   };
 
-  return { category: kase.category as Category, data };
+  return { category: kase.category as Category, data, documentNumbers: kase.documentNumbers };
 }
