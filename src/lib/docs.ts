@@ -6,7 +6,7 @@ export interface DocDef {
   label: string;
 }
 
-/** The 13 documents, in canonical numbered order. */
+/** The 14 documents, in canonical numbered order. */
 export const DOC_LIST: DocDef[] = [
   { id: 'approveReq', no: 1, label: 'ขออนุมัติจัดหา' },
   { id: 'memo', no: 2, label: 'แต่งตั้ง กก.ราคากลาง' },
@@ -21,12 +21,13 @@ export const DOC_LIST: DocDef[] = [
   { id: 'inspect', no: 11, label: 'ใบตรวจรับพัสดุ' },
   { id: 'inspectReport', no: 12, label: 'รายงานผลตรวจรับ' },
   { id: 'payReq', no: 13, label: 'ขออนุมัติเบิก-จ่าย' },
+  { id: 'integrity', no: 14, label: 'แบบแสดงความบริสุทธิ์ใจ' },
 ];
 
 export const DOC_PHASES: { name: string; items: DocDef[] }[] = [
   { name: '๑ ขอซื้อ/ขอจ้าง', items: DOC_LIST.slice(0, 6) },
   { name: '๒ จัดหา', items: DOC_LIST.slice(6, 10) },
-  { name: '๓ ตรวจรับ/จ่าย', items: DOC_LIST.slice(10, 13) },
+  { name: '๓ ตรวจรับ/จ่าย', items: DOC_LIST.slice(10, 14) },
 ];
 
 export type SectionKey =
@@ -56,6 +57,7 @@ export const SEC: Record<DocId, SectionKey[]> = {
   inspect: ['org', 'project', 'vendor', 'amount', 'inspectors', 'dates'],
   inspectReport: ['org', 'project', 'vendor', 'inspectors', 'signers', 'dates', 'meta'],
   payReq: ['org', 'project', 'vendor', 'amount', 'signers', 'meta'],
+  integrity: ['org', 'project', 'amount', 'inspectors', 'signers'],
 };
 
 /** The 7 documents that carry a real government เลขที่/วันที่ reference number, in date/number order. */

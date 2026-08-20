@@ -1,6 +1,7 @@
 import { useApp } from '../state/store';
 import { useAuth } from '../state/auth';
 import type { Category } from '../types';
+import { DOC_LIST } from '../lib/docs';
 
 const CATS: { key: Category; label: string }[] = [
   { key: 'purchase', label: 'จัดซื้อ' },
@@ -104,7 +105,7 @@ export function Header({ onDownloadWord }: { onDownloadWord: () => void }) {
           style={{ padding: '7px 10px', borderRadius: 8, border: 'none', fontFamily: "'Sarabun',sans-serif", fontSize: 13, background: '#0e1d2e', color: '#cdd8e4' }}
         >
           <option value="current">พิมพ์: ฉบับนี้</option>
-          <option value="all">พิมพ์: ทั้งชุด (13 ฉบับ)</option>
+          <option value="all">พิมพ์: ทั้งชุด ({DOC_LIST.length} ฉบับ)</option>
         </select>
         <button
           onClick={openReview}

@@ -13,7 +13,8 @@ export type DocId =
   | 'order'
   | 'inspect'
   | 'inspectReport'
-  | 'payReq';
+  | 'payReq'
+  | 'integrity';
 
 /** The 7 document ids that carry an official เลขที่/วันที่ reference number. */
 export type MeteredDocId = 'approveReq' | 'memo' | 'priceReport' | 'report' | 'approve' | 'inspectReport' | 'payReq';
