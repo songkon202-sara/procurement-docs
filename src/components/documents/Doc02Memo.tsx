@@ -11,7 +11,7 @@ export function Doc02Memo({ data, vm, garudaUrl, display }: DocProps) {
         orgFull={vm.orgFull}
         no={meta.no}
         date={meta.date}
-        subject={`ขออนุมัติแต่งตั้งคณะกรรมการจัดทำ${vm.cat.spec} ราคากลางและหลักเกณฑ์การพิจารณาคัดเลือกข้อเสนอ ${vm.projectFull}`}
+        subject={`ขออนุมัติแต่งตั้งคณะกรรมการจัดทำ${vm.cat.specBody} ราคากลางและหลักเกณฑ์การพิจารณาคัดเลือกข้อเสนอ ${vm.projectFull}`}
       />
       <div className="doc-body">
         <p className="ni">
@@ -22,15 +22,15 @@ export function Doc02Memo({ data, vm, garudaUrl, display }: DocProps) {
         </p>
         <p>
           ในการนี้ {data.workGroup} มีความประสงค์จะ{vm.projectFull} เพื่อ {data.objective} และให้เป็นไปตามระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ
-          พ.ศ. 2560 ข้อ 21 ควรจัดทำ{vm.cat.spec} สำหรับ {vm.projectFull} และขอแต่งตั้งเจ้าหน้าที่จัดทำ{vm.cat.spec}ใช้สำหรับการดำเนินการจัดซื้อ/จัดจ้าง
+          พ.ศ. 2560 ข้อ 21 ควรจัดทำ{vm.cat.specBody} สำหรับ {vm.projectFull} และขอแต่งตั้งเจ้าหน้าที่จัดทำ{vm.cat.specBody}ใช้สำหรับการดำเนินการจัดซื้อ/จัดจ้าง
           ดังกล่าว ดังนี้
         </p>
       </div>
       <PersonRows people={data.committee} margin="6px 0 8px 1.5cm" nameFlex={1.5} posFlex={2.1} />
       <div className="doc-body">
         <p>
-          โดยให้มีหน้าที่จัดทำ{vm.cat.spec} ราคากลางและหลักเกณฑ์การพิจารณาคัดเลือกข้อเสนอ{vm.projectFull} โดยกำหนดรายละเอียด
-          เป็นไปตามกฎหมาย ระเบียบ และคำสั่งที่เกี่ยวข้อง และให้ใช้บันทึกนี้แทนคำสั่งแต่งตั้งเจ้าหน้าที่จัดทำรายละเอียดคุณลักษณะเฉพาะของพัสดุ
+          โดยให้มีหน้าที่จัดทำ{vm.cat.specBody} ราคากลางและหลักเกณฑ์การพิจารณาคัดเลือกข้อเสนอ{vm.projectFull} โดยกำหนดรายละเอียด
+          เป็นไปตามกฎหมาย ระเบียบ และคำสั่งที่เกี่ยวข้อง และให้ใช้บันทึกนี้แทนคำสั่งแต่งตั้งเจ้าหน้าที่จัดทำ{vm.cat.specBody}
         </p>
         <p>จึงเรียนมาเพื่อโปรดพิจารณา</p>
       </div>
