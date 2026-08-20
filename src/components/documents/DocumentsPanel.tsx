@@ -16,6 +16,7 @@ import { Doc10Order } from './Doc10Order';
 import { Doc11Inspect } from './Doc11Inspect';
 import { Doc12InspectReport } from './Doc12InspectReport';
 import { Doc13PayReq } from './Doc13PayReq';
+import { Doc14Integrity } from './Doc14Integrity';
 import type { DocProps } from './types';
 
 const DOC_COMPONENTS: Record<DocId, (props: DocProps) => JSX.Element> = {
@@ -32,6 +33,7 @@ const DOC_COMPONENTS: Record<DocId, (props: DocProps) => JSX.Element> = {
   inspect: Doc11Inspect,
   inspectReport: Doc12InspectReport,
   payReq: Doc13PayReq,
+  integrity: Doc14Integrity,
 };
 
 const DOC_ORDER: DocId[] = [
@@ -48,6 +50,7 @@ const DOC_ORDER: DocId[] = [
   'inspect',
   'inspectReport',
   'payReq',
+  'integrity',
 ];
 
 export function DocumentsPanel({ data, vm }: { data: ProcurementData; vm: DocViewModel }) {

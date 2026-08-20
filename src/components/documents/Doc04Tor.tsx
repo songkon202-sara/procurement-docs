@@ -5,7 +5,7 @@ export function Doc04Tor({ data, vm, display }: DocProps) {
   return (
     <div className="pg" data-doc-id="tor" style={{ display }}>
       <div style={{ textAlign: 'center', marginBottom: 8 }}>
-        <div style={{ fontSize: '18pt', fontWeight: 700 }}>{vm.cat.spec}</div>
+        <div style={{ fontSize: '18pt', fontWeight: 700 }}>{vm.cat.specTitle}</div>
         <div>{vm.projectFull}</div>
         <div>{vm.orgFull}</div>
       </div>
