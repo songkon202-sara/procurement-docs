@@ -44,7 +44,7 @@ export async function downloadWordDoc(
 
   const body = parts.join('');
   const css =
-    '@page Section1{size:21.0cm 29.7cm;mso-page-orientation:portrait;margin:1.5cm 2.0cm 2.0cm 3.0cm}' +
+    '@page Section1{size:21.0cm 29.7cm;mso-page-orientation:portrait;margin:1.5cm 2.0cm 2.0cm 3.0cm;mso-header-margin:0cm;mso-footer-margin:0cm;mso-header:none;mso-footer:none}' +
     'div.Section1{page:Section1}' +
     "body{font-family:'TH SarabunIT9','TH Sarabun New','TH SarabunPSK','Sarabun',sans-serif;font-size:16pt;line-height:1.4;color:#000}" +
     '.pg{font-size:16pt;line-height:1.5}' +
